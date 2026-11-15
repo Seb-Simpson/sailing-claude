@@ -206,7 +206,7 @@ export class Sky {
 
     // ambient
     const amb = U.uAmbient.value;
-    amb.setRGB(0.022, 0.032, 0.06).lerp(tmp.setRGB(0.36, 0.44, 0.56), day).lerp(tmp.setRGB(0.42, 0.30, 0.30), set * 0.5 * (1 - grey));
+    amb.setRGB(0.03, 0.044, 0.082).lerp(tmp.setRGB(0.36, 0.44, 0.56), day).lerp(tmp.setRGB(0.42, 0.30, 0.30), set * 0.5 * (1 - grey));
     amb.lerp(tmp.setRGB(0.34, 0.36, 0.39).multiplyScalar(level), grey * 0.8);
     amb.multiplyScalar(1 - 0.45 * storm);
     this.flash = Math.max(0, this.flash - dt * 3.2);
