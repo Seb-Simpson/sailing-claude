@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Beyond the Horizon</title>
+<meta name="description" content="Beyond the Horizon — an open-sea sailing adventure. Trim your sails, chart the islands, light the five beacons.">
+<meta name="theme-color" content="#081422">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23081422'/%3E%3Cpath d='M12 42h40' stroke='%23d9b36c' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M20 42a12 12 0 0 1 24 0z' fill='%23d9b36c'/%3E%3Cpath d='M18 50h28M24 56h16' stroke='%235f8fb0' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/jsm/" } }</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="vignette"></div>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="load-inner">
+    <svg class="emblem" viewBox="0 0 120 80"><path d="M10 52h100" /><path class="sun" d="M36 52a24 24 0 0 1 48 0z"/><path d="M26 64h68M42 74h36"/></svg>
+    <div class="load-title">Beyond the Horizon</div>
+    <div class="load-bar"><i id="load-fill"></i></div>
+    <div id="load-text">Charting the sea…</div>
+  </div>
+</div>
+
+<!-- Main menu -->
+<div id="menu" class="hidden">
+  <div class="menu-col">
+    <div class="kicker">An open-sea sailing adventure</div>
+    <h1>Beyond<span>the</span>Horizon</h1>
+    <div class="rule"></div>
+    <nav>
+      <button id="btn-continue" class="mbtn hidden">Continue Voyage<small id="continue-info"></small></button>
+      <button id="btn-new" class="mbtn">New Voyage</button>
+      <button id="btn-howto" class="mbtn">How to Sail</button>
+      <button id="btn-settings" class="mbtn">Settings</button>
+      <button id="btn-credits" class="mbtn">Credits</button>
+    </nav>
+  </div>
+  <div class="menu-foot">Best with sound on · Progress saves automatically in this browser</div>
+</div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="hud-top">
+    <canvas id="compass" width="1040" height="96"></canvas>
+    <div id="heading"></div>
+  </div>
+  <div id="status" class="glass">
+    <div class="row"><span id="st-time">08:00</span><span class="dot"></span><span id="st-day">Day 1</span></div>
+    <div class="row sub"><span id="st-wx-icon"></span><span id="st-wx">Fair weather</span></div>
+    <div class="row gold"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/></svg><span id="st-gold">120</span><span class="rank" id="st-rank">Deckhand</span></div>
+  </div>
+  <div id="objective" class="glass">
+    <div class="obj-kicker">Current course</div>
+    <div id="obj-title"></div>
+    <div id="obj-text"></div>
+    <div id="obj-dist"></div>
+  </div>
+  <div id="helm" class="glass">
+    <canvas id="winddial" width="360" height="360"></canvas>
+    <div class="helm-data">
+      <div class="speed"><span id="h-speed">0.0</span><small>knots</small></div>
+      <div class="hrow"><label>Wind</label><span id="h-wind">12 kn NE</span></div>
+      <div class="hrow"><label>Sails</label><span class="pips" id="h-pips"><i></i><i></i><i></i></span><span id="h-sail">Furled</span></div>
+      <div class="hrow"><label>Sheet</label><span class="bar"><i id="h-sheet"></i></span></div>
+      <div class="hrow"><label>Trim</label><span class="bar trim"><i id="h-trim"></i></span><span id="h-trimv">0%</span></div>
+      <div class="hrow"><label>Hull</label><span class="bar hull"><i id="h-hull"></i></span><span id="h-hullv">100</span></div>
+      <div class="tags"><span id="tag-auto" class="tag">Auto-trim</span><span id="tag-anchor" class="tag">Anchored</span></div>
+    </div>
+  </div>
+  <div id="mini-wrap"><canvas id="minimap" width="360" height="360"></canvas><div class="mini-n">N</div></div>
+  <div id="warn"></div>
+  <div id="prompt" class="hidden"><kbd>F</kbd><span id="prompt-text"></span></div>
+  <div id="banner" class="hidden"><div class="b-kicker" id="banner-kicker">Discovered</div><div class="b-title" id="banner-title"></div><div class="b-sub" id="banner-sub"></div></div>
+  <div id="toasts"></div>
+  <div id="keys" class="glass">
+    <span><kbd>A</kbd><kbd>D</kbd> steer</span><span><kbd>W</kbd><kbd>S</kbd> ease / haul sheet</span><span><kbd>E</kbd><kbd>Q</kbd> raise / lower sail</span>
+    <span><kbd>T</kbd> auto-trim</span><span><kbd>Space</kbd> anchor</span><span><kbd>M</kbd> chart</span><span><kbd>J</kbd> journal</span><span><kbd>C</kbd> camera</span><span><kbd>H</kbd> hide</span>
+  </div>
+</div>
+
+<!-- Touch controls -->
+<div id="touch" class="hidden">
+  <div class="t-left"><button data-k="KeyA">◀</button><button data-k="KeyD">▶</button></div>
+  <div class="t-right">
+    <button data-k="KeyE" class="sm">Sail ▲</button><button data-k="KeyQ" class="sm">Sail ▼</button>
+    <button data-k="KeyW" class="sm">Ease</button><button data-k="KeyS" class="sm">Haul</button>
+    <button data-k="KeyF" class="sm act">Act</button><button data-k="Space" class="sm">Anchor</button>
+    <button data-k="KeyM" class="sm">Chart</button><button data-k="Escape" class="sm">Menu</button>
+  </div>
+</div>
+
+<!-- Chart -->
+<div id="panel-map" class="overlay hidden">
+  <div class="sheet chart">
+    <header><h2>Sea Chart</h2><div class="chart-meta" id="map-meta"></div><button class="x" data-close>✕</button></header>
+    <div class="chart-body"><canvas id="mapcanvas" width="1200" height="1200"></canvas>
+      <aside>
+        <h3>Legend</h3>
+        <ul class="legend">
+          <li><i class="lg anchor"></i>Harbour</li><li><i class="lg light"></i>Lighthouse</li><li><i class="lg beacon"></i>Ancient beacon</li>
+          <li><i class="lg wreck"></i>Wreck</li><li><i class="lg you"></i>Your ship</li><li><i class="lg goal"></i>Current course</li>
+        </ul>
+        <h3>Discoveries</h3><div id="map-progress"></div>
+        <p class="note">Unexplored waters stay shrouded until you sail them. A better spyglass reveals more.</p>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<!-- Journal -->
+<div id="panel-journal" class="overlay hidden">
+  <div class="sheet journal">
+    <header><h2>Captain's Journal</h2>
+      <div class="tabs" id="journal-tabs"><button data-tab="voyage" class="on">Voyage</button><button data-tab="islands">Islands</button><button data-tab="bottles">Bottles</button><button data-tab="hold">Hold</button></div>
+      <button class="x" data-close>✕</button></header>
+    <div class="sheet-body" id="journal-body"></div>
+  </div>
+</div>
+
+<!-- Harbour -->
+<div id="panel-harbour" class="overlay hidden">
+  <div class="sheet harbour">
+    <header><div><div class="kicker">Moored at</div><h2 id="hb-name">Port Haven</h2></div>
+      <div class="tabs" id="hb-tabs"><button data-tab="master" class="on">Harbourmaster</button><button data-tab="market">Market</button><button data-tab="yard">Shipwright</button><button data-tab="tavern">Tavern</button></div>
+      <div class="purse"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/></svg><span id="hb-gold">0</span><small id="hb-hold"></small></div></header>
+    <div class="sheet-body" id="hb-body"></div>
+    <footer><span id="hb-msg"></span><button id="hb-leave" class="pbtn">Cast off  ⟶</button></footer>
+  </div>
+</div>
+
+<!-- Pause -->
+<div id="panel-pause" class="overlay hidden">
+  <div class="sheet narrow center">
+    <h2>Hove To</h2><div class="rule"></div>
+    <button class="mbtn" id="ps-resume">Resume</button>
+    <button class="mbtn" id="ps-howto">How to Sail</button>
+    <button class="mbtn" id="ps-settings">Settings</button>
+    <button class="mbtn" id="ps-quit">Save &amp; Return to Title</button>
+  </div>
+</div>
+
+<!-- Settings -->
+<div id="panel-settings" class="overlay hidden">
+  <div class="sheet narrow">
+    <header><h2>Settings</h2><button class="x" data-close>✕</button></header>
+    <div class="sheet-body settings">
+      <label>Graphics quality<select id="set-quality"><option value="0">Low</option><option value="1">Medium</option><option value="2">High</option></select></label>
+      <label>Master volume<input type="range" id="set-master" min="0" max="100"></label>
+      <label>Music<input type="range" id="set-music" min="0" max="100"></label>
+      <label>Sound effects<input type="range" id="set-sfx" min="0" max="100"></label>
+      <label class="chk"><input type="checkbox" id="set-autotrim">Auto-trim sails<small>The crew trims the sheet for you. Toggle any time with T.</small></label>
+      <label class="chk"><input type="checkbox" id="set-keys">Show key hints<small>The control strip at the bottom of the screen.</small></label>
+      <label>Day length<select id="set-day"><option value="10">Short (10 min)</option><option value="20">Normal (20 min)</option><option value="40">Long (40 min)</option></select></label>
+      <div class="danger"><button id="set-wipe" class="pbtn ghost">Erase saved voyage</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Help -->
+<div id="panel-help" class="overlay hidden">
+  <div class="sheet help">
+    <header><h2>How to Sail</h2><button class="x" data-close>✕</button></header>
+    <div class="sheet-body helpgrid">
+      <section>
+        <h3>The wind is your engine</h3>
+        <p>You cannot sail straight into the wind. The red wedge on the wind dial is the <b>no-go zone</b>: point your bow into it and the sails shiver and stall. Bear away until they fill.</p>
+        <p>To travel upwind, <b>tack</b>: zig-zag across the wind, about 45° either side.</p>
+        <h3>Trim the sheet</h3>
+        <p>The sheet controls how far the boom swings out. <b>Haul in</b> (S) when sailing close to the wind; <b>ease out</b> (W) as the wind moves behind you. The dashed line on the dial shows the ideal angle — match it and the trim bar turns green.</p>
+        <h3>Respect the weather</h3>
+        <p>In a strong blow, full sail will lay the boat on her side and strain the hull. <b>Reef</b> (Q) before the storm arrives. The sky will warn you.</p>
+      </section>
+      <section>
+        <h3>Controls</h3>
+        <table class="keys">
+          <tr><td><kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd></td><td>Rudder</td></tr>
+          <tr><td><kbd>W</kbd> <kbd>S</kbd> / <kbd>↑</kbd> <kbd>↓</kbd></td><td>Ease out / haul in the sheet</td></tr>
+          <tr><td><kbd>E</kbd> <kbd>Q</kbd></td><td>Raise / lower (reef) sail</td></tr>
+          <tr><td><kbd>T</kbd></td><td>Toggle auto-trim</td></tr>
+          <tr><td><kbd>Space</kbd></td><td>Drop / weigh anchor</td></tr>
+          <tr><td><kbd>F</kbd></td><td>Dock, light beacons, search wrecks</td></tr>
+          <tr><td><kbd>M</kbd> · <kbd>J</kbd></td><td>Sea chart · Journal</td></tr>
+          <tr><td><kbd>C</kbd></td><td>Change camera</td></tr>
+          <tr><td>Mouse drag · wheel</td><td>Look around · zoom</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Pause</td></tr>
+        </table>
+        <h3>Making your way</h3>
+        <p>Harbours buy and sell goods at very different prices, offer delivery contracts, and fit out your boat. Bottles and barrels drift on the open sea. Somewhere out there, five beacons are waiting.</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Credits -->
+<div id="panel-credits" class="overlay hidden">
+  <div class="sheet narrow center">
+    <header><h2>Credits</h2><button class="x" data-close>✕</button></header>
+    <div class="sheet-body credits">
+      <p><b>Beyond the Horizon</b><br>Design, code, art, sound and music — all generated procedurally in your browser.</p>
+      <p>Rendering by <b>three.js</b> (MIT licence).<br>Typefaces: <b>Cinzel</b> and <b>Cormorant Garamond</b> (SIL Open Font Licence).</p>
+      <p>No trackers, no accounts, no network calls. Your voyage lives in this browser's local storage.</p>
+      <p class="note">Fair winds and following seas.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Story card -->
+<div id="story" class="overlay hidden">
+  <div class="card">
+    <div class="kicker" id="story-kicker"></div>
+    <h2 id="story-title"></h2>
+    <div class="rule"></div>
+    <p id="story-text"></p>
+    <button class="pbtn" id="story-btn">Continue</button>
+  </div>
+</div>
+
+<div id="fade"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
